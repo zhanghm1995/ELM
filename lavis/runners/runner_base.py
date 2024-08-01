@@ -89,7 +89,8 @@ class RunnerBase:
             if self.use_distributed:
                 if self._wrapped_model is None:
                     self._wrapped_model = DDP(
-                        self._model, device_ids=[self.config.run_cfg.gpu]
+                        self._model, device_ids=[self.config.run_cfg.gpu],
+                        find_unused_parameters=True,
                     )
             else:
                 self._wrapped_model = self._model
@@ -635,6 +636,15 @@ class RunnerBase:
             raise RuntimeError("checkpoint url or path is invalid")
 
         state_dict = checkpoint["model"]
+        for k in list(state_dict.keys()):
+            if 'base_model.model.t5_model.encoder.block' in k and 'SelfAttention.q.weight' in k or \
+               'base_model.model.t5_model.encoder.block' in k and 'SelfAttention.v.weight' in k or \
+               'base_model.model.t5_model.decoder.block' in k and 'SelfAttention.q.weight' in k or \
+               'base_model.model.t5_model.decoder.block' in k and 'SelfAttention.v.weight' in k or \
+               'base_model.model.t5_model.decoder.block' in k and 'EncDecAttention.q.weight' in k or \
+               'base_model.model.t5_model.decoder.block' in k and 'EncDecAttention.v.weight' in k:
+                k_w_base_model = k.replace('weight', 'base_layer.weight')
+                state_dict[k_w_base_model] = state_dict.pop(k)
         # # add prefix base_model.model. to the key of state_dict
         # for k in list(state_dict.keys()):
         #     state_dict["base_model.model." + k] = state_dict.pop(k)
@@ -643,7 +653,7 @@ class RunnerBase:
         # state_dict.pop("t5_model.encoder.embed_tokens.weight")
         # state_dict.pop("t5_model.decoder.embed_tokens.weight")
         # state_dict.pop("t5_model.lm_head.weight")
-        self.unwrap_dist_model(self.model).load_state_dict(state_dict, strict=True)
+        self.unwrap_dist_model(self.model).load_state_dict(state_dict, strict=False)
 
         try: 
             self.optimizer.load_state_dict(checkpoint["optimizer"])

@@ -138,7 +138,7 @@ class Blip2VQAT5ELM(Blip2Base):
             print(samples["answers"])
             self.check = False
         device = samples["vfeats"].device
-        vfeats = samples["vfeats"]
+        vfeats = samples["vfeats"].squeeze(1)
 
         B = vfeats.shape[0]
         device = vfeats.device
@@ -363,7 +363,7 @@ class Blip2VQAT5ELM(Blip2Base):
             self.check = False
             
         device = samples["vfeats"].device
-        vfeats = samples["vfeats"]
+        vfeats = samples["vfeats"].squeeze(1)
 
         B = vfeats.shape[0]
         device = vfeats.device

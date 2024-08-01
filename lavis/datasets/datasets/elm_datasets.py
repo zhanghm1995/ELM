@@ -57,6 +57,16 @@ def get_img_frames(clip_id, timestamp_frame):
     return None
 
 
+def codalm_load_json_file(file_path):
+    file = open(file_path, 'r', encoding='utf-8')
+    papers = []
+    for line in file.readlines():
+        dic = json.loads(line)
+        papers.append(dic)
+    return papers
+
+
+
 class ELMDataset(VQADataset, __DisplMixin):
     def __init__(self, vis_processor=None, text_processor=None, vis_root=None, ann_paths=None):
         """
@@ -81,9 +91,21 @@ class ELMDataset(VQADataset, __DisplMixin):
                 if line_number>=(self.num_threshold-1000):
                     self.num_to_vocab[line_number] = line_content
 
-        self.default_drivelm(ann_paths)
+        # self.default_drivelm(ann_paths)
+        self.tmp_imglist = []
+        self.default_codalm()
         print("The number of data: ", len(self.questions))
 
+    def default_codalm(self):                        
+        self.data_info = codalm_load_json_file('./data/coda-lm/CODA-LM/Train/vqa_anno/general_perception.jsonl')
+        
+        for idx, info in enumerate(self.data_info):
+            cur_image_path = './data/coda-lm/' + info['image']
+
+            self.questions.append(info['question'])
+            self.answers.append([info['answer']])
+            self.images.append(cur_image_path)
+            self.tmp_imglist.append([cur_image_path])
 
     def configure_traffic(self):
         data_root = 'data/openlane_v2_nus'
@@ -421,7 +443,7 @@ class ELMDataset(VQADataset, __DisplMixin):
         }
 
     def __len__(self):
-        return (len(self.questions)+len(self.questions))
+        return len(self.questions)
 
     def collater(self, samples):
         # merge samples into a list for each key
@@ -468,13 +490,26 @@ class ELMDatasetEvalDataset(VQADataset, __DisplMixin):
                     self.num_to_vocab[line_number] = line_content
 
 
-        self.default_drivelm(ann_paths)
+        # self.default_drivelm(ann_paths)
+
+        # self.questions.extend(self.questions)
+        # self.answers.extend(self.answers)
+        # self.images.extend(self.images)
+
+        self.tmp_imglist = []
+        self.default_codalm()
         print("The number of data: ", len(self.questions))
 
-        self.questions.extend(self.questions)
-        self.answers.extend(self.answers)
-        self.images.extend(self.images)
+    def default_codalm(self):                        
+        self.data_info = codalm_load_json_file('./data/coda-lm/CODA-LM/Val/vqa_anno/general_perception.jsonl')
+        
+        for idx, info in enumerate(self.data_info):
+            cur_image_path = './data/coda-lm/' + info['image']
 
+            self.questions.append(info['question'])
+            self.answers.append([info['answer']])
+            self.images.append(cur_image_path)
+            self.tmp_imglist.append([cur_image_path])
 
     def default_drivelm(self, ann_paths):
         self.annotation = json.load(open(ann_paths[0], "r"))
